@@ -18,12 +18,19 @@ function resetDb() {
 
 // ---------- Kuis ----------
 function createQuiz({ title, questions, durationMin }) {
-  if (!title || title.trim().length < 3) throw new Error("judul minimal 3 karakter");
-  if (!Array.isArray(questions) || questions.length === 0) throw new Error("minimal 1 soal");
-  const quiz = { id: nextId++, title: title.trim(), questions: [...questions], durationMin, endsAt: null };
+  if (!title || title.trim().length < 3)
+    throw new Error("judul minimal 3 karakter");
+  if (!Array.isArray(questions) || questions.length === 0)
+    throw new Error("minimal 1 soal");
+  const quiz = {
+    id: nextId++,
+    title: title.trim(),
+    questions: questions.map((q) => ({ ...q, options: [...q.options] })),
+    durationMin,
+    endsAt: null,
+  };
   db.quizzes.set(quiz.id, quiz);
-  const quizDeepCopy = JSON.parse(JSON.stringify(quiz))
-  return quizDeepCopy;
+  return quiz;
 }
 
 function getQuiz(id) {
@@ -34,14 +41,43 @@ function getQuiz(id) {
 
 function startQuiz(id) {
   const quiz = getQuiz(Number(id));
-  console.log("id yang masuk:", id, typeof id);
-  console.log("id yang masuk:", quiz, typeof quiz);
-  quiz.endsAt = clock.now() + quiz.durationMin * 60;
+  // console.log("id yang masuk:", id, typeof id);
+  quiz.endsAt = clock.now() + quiz.durationMin * 60 * 1000;
+  // console.log("ends:", quiz.endsAt, "clock:", clock.now());
   return quiz;
 }
 
 function searchQuizzes(term) {
-  const re = new RegExp(term, "i");
+  // console.log("term:", term)
+  const specialChar = [
+    ".",
+    "*",
+    "+",
+    "?",
+    "(",
+    ")",
+    "[",
+    "]",
+    "{",
+    "}",
+    "^",
+    "$",
+    "|",
+    "\\",
+  ];
+  // console.log("specialChar:", JSON.stringify(specialChar.includes(term)));
+  // console.log("specialChar:", specialChar.includes(term));
+  let result = "";
+  // console.log("result:", JSON.stringify(result))
+  for (const k of term) {
+    if (specialChar.includes(k)) {
+      result += "\\" + k;
+    } else {
+      result += k;
+    }
+  }
+
+  const re = new RegExp(result, "i");
   return [...db.quizzes.values()].filter((q) => re.test(q.title));
 }
 
@@ -50,37 +86,54 @@ async function submitAnswer(quizId, userId, qIndex, choice) {
   const quiz = getQuiz(quizId);
   if (quiz.endsAt === null) throw new Error("kuis belum dimulai");
   if (clock.now() > quiz.endsAt) throw new Error("kuis sudah berakhir");
-  if (!Number.isInteger(qIndex) || qIndex < 0 || qIndex > quiz.questions.length) {
+  if (
+    !Number.isInteger(qIndex) ||
+    qIndex < 0 ||
+    qIndex >= quiz.questions.length
+  ) {
     throw new Error("soal tidak valid");
   }
-  const exists = db.answers.some(
-    (a) => a.quizId === quiz.id && a.userId === userId && a.qIndex === qIndex
-  );
-  if (exists) throw new Error("sudah menjawab");
+  // console.log("index:", quiz.questions.length)
   await sleep(5); // simulasi menulis ke database
+  const exists = db.answers.some(
+    (a) => a.quizId === quiz.id && a.userId === userId && a.qIndex === qIndex,
+  );
+  // console.log("exists:", exists);
+  // console.log("q:", quiz.questions.length);
+  // console.log("id:", quiz.id);
+  if (exists) {
+    throw new Error("sudah menjawab");
+  }
   db.answers.push({ quizId: quiz.id, userId, qIndex, choice, at: clock.now() });
 }
 
 async function submitMany(quizId, userId, list) {
-  list.forEach(async ({ qIndex, choice }) => {
+  for (const { qIndex, choice } of list) {
     await submitAnswer(quizId, userId, qIndex, choice);
-  });
+  }
+  console.log("selesai");
   return list.length;
 }
 
 // ---------- Nilai ----------
 function getScore(quizId, userId) {
   const quiz = getQuiz(quizId);
-  const mine = db.answers.filter((a) => a.quizId === quiz.id && a.userId === userId);
+  const mine = db.answers.filter(
+    (a) => a.quizId === quiz.id && a.userId === userId,
+  );
   const correct = mine.reduce(
-    (sum, a) => sum + (quiz.questions[a.qIndex].correct === a.choice ? 1 : 0)
+    (sum, a) => sum + (quiz.questions[a.qIndex].correct === a.choice ? 1 : 0),
   );
   return { correct, percent: Math.round((correct / mine.length) * 100) };
 }
 
 function leaderboard(quizId) {
   const quiz = getQuiz(quizId);
-  const users = [...new Set(db.answers.filter((a) => a.quizId === quiz.id).map((a) => a.userId))];
+  const users = [
+    ...new Set(
+      db.answers.filter((a) => a.quizId === quiz.id).map((a) => a.userId),
+    ),
+  ];
   return users
     .map((userId) => ({ userId, ...getScore(quiz.id, userId) }))
     .sort((a, b) => a.correct < b.correct);
@@ -116,8 +169,18 @@ function makeQuestionLabels(total) {
 }
 
 module.exports = {
-  db, clock, resetDb,
-  createQuiz, getQuiz, startQuiz, searchQuizzes,
-  submitAnswer, submitMany, getScore, leaderboard,
-  paginate, makeRateLimiter, makeQuestionLabels,
+  db,
+  clock,
+  resetDb,
+  createQuiz,
+  getQuiz,
+  startQuiz,
+  searchQuizzes,
+  submitAnswer,
+  submitMany,
+  getScore,
+  leaderboard,
+  paginate,
+  makeRateLimiter,
+  makeQuestionLabels,
 };

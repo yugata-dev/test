@@ -15,19 +15,19 @@ test.beforeEach(() => {
   s.clock.now = () => 1_000_000;
 });
 
-// test("kuis tidak ikut berubah saat data asli milik pemanggil diubah", () => {
-//   const qs = Q();
-//   const quiz = s.createQuiz({ title: "Dasar", questions: qs, durationMin: 10 });
-//   qs[0].correct = 0;
-//   qs.push({ text: "baru", options: [], correct: 0 });
-//   assert.equal(quiz.questions.length, 3);
-//   assert.equal(quiz.questions[0].correct, 1);
-// });
+test("kuis tidak ikut berubah saat data asli milik pemanggil diubah", () => {
+  const qs = Q();
+  const quiz = s.createQuiz({ title: "Dasar", questions: qs, durationMin: 10 });
+  qs[0].correct = 0;
+  qs.push({ text: "baru", options: [], correct: 0 });
+  assert.equal(quiz.questions.length, 3);
+  assert.equal(quiz.questions[0].correct, 1);
+});
 
-// test("kuis bisa diambil dengan id berupa string (seperti dari URL)", () => {
-//   const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
-//   assert.equal(s.getQuiz(String(quiz.id)).id, quiz.id);
-// });
+test("kuis bisa diambil dengan id berupa string (seperti dari URL)", () => {
+  const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
+  assert.equal(s.getQuiz(String(quiz.id)).id, quiz.id);
+});
 
 test("kuis 10 menit berakhir tepat 10 menit setelah dimulai", () => {
   const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
@@ -35,12 +35,12 @@ test("kuis 10 menit berakhir tepat 10 menit setelah dimulai", () => {
   assert.equal(quiz.endsAt, 1_000_000 + 10 * 60 * 1000);
 });
 
-// test("pencarian dengan karakter spesial tidak error dan tetap menemukan judul", () => {
-//   s.createQuiz({ title: "Belajar C++ (dasar)", questions: Q(), durationMin: 5 });
-//   assert.equal(s.searchQuizzes("c++").length, 1);
-//   assert.equal(s.searchQuizzes("(dasar)").length, 1);
-//   assert.doesNotThrow(() => s.searchQuizzes("["));
-// });
+test("pencarian dengan karakter spesial tidak error dan tetap menemukan judul", () => {
+  s.createQuiz({ title: "Belajar C++ (dasar)", questions: Q(), durationMin: 5 });
+  assert.equal(s.searchQuizzes("c++").length, 1);
+  assert.equal(s.searchQuizzes("(dasar)").length, 1);
+  assert.doesNotThrow(() => s.searchQuizzes("["));
+});
 
 // test("nomor soal sama dengan jumlah soal ditolak", async () => {
 //   const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
@@ -48,17 +48,17 @@ test("kuis 10 menit berakhir tepat 10 menit setelah dimulai", () => {
 //   await assert.rejects(() => s.submitAnswer(quiz.id, "ani", 3, 0), /soal tidak valid/);
 // });
 
-// test("jawaban bersamaan untuk soal yang sama hanya tersimpan sekali", async () => {
-//   const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
-//   s.startQuiz(quiz.id);
-//   const results = await Promise.allSettled([
-//     s.submitAnswer(quiz.id, "ani", 0, 1),
-//     s.submitAnswer(quiz.id, "ani", 0, 1),
-//     s.submitAnswer(quiz.id, "ani", 0, 0),
-//   ]);
-//   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-//   assert.equal(s.db.answers.length, 1);
-// });
+test("jawaban bersamaan untuk soal yang sama hanya tersimpan sekali", async () => {
+  const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
+  s.startQuiz(quiz.id);
+  const results = await Promise.allSettled([
+    s.submitAnswer(quiz.id, "ani", 0, 1),
+    s.submitAnswer(quiz.id, "ani", 0, 1),
+    s.submitAnswer(quiz.id, "ani", 0, 0),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(s.db.answers.length, 1);
+});
 
 // test("submitMany menunggu semua jawaban tersimpan", async () => {
 //   const quiz = s.createQuiz({ title: "Dasar", questions: Q(), durationMin: 10 });
